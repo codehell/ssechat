@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/alexandrevicenzi/go-sse"
 	"log"
 	"net/http"
 	"time"
@@ -12,12 +11,9 @@ import (
 var clients []chan string
 
 func main() {
-	s := sse.NewServer(nil)
-	defer s.Shutdown()
 	ms := NewMySSE()
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
-	http.Handle("/sse", s)
 	http.Handle("/my-sse", ms)
 
 	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +25,6 @@ func main() {
 		}
 		content, ok := message["content"]
 		if ok {
-			s.SendMessage("/sse", sse.SimpleMessage(content))
 			for _, client := range clients {
 				log.Println("message sent to client", client)
 				client <- content
