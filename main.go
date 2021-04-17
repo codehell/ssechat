@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 )
 
 var clients []chan string
@@ -54,8 +53,6 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.Set("X-Accel-Buffering", "no")
 		client := make(chan string)
 		clients = append(clients, client)
-		s.events = append(s.events, r.Header.Get("Last-Event-ID"))
-		log.Println(s.events[len(s.events)-1])
 		flusher := w.(http.Flusher)
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
@@ -70,7 +67,7 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					log.Println(err)
 				}
 				flusher.Flush()
-				time.Sleep(time.Second * 1)
+				// time.Sleep(time.Second * 1)
 			}
 		}
 	}
