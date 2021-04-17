@@ -3,17 +3,19 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
 	"net/http"
 	"time"
 )
 
-var clients []string
+var clients map[string]bool
 var ch chan string
 
 func main() {
 	ms := NewMySSE()
 	ch = make(chan string)
+	clients = make(map[string]bool)
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
 	http.Handle("/my-sse", ms)
@@ -27,8 +29,8 @@ func main() {
 		}
 		content, ok := message["content"]
 		if ok {
-			for _, client := range clients {
-				log.Println("message sent to client", client)
+			for clientID, _ := range clients {
+				log.Println("message sent to client", clientID)
 				ch <- content
 			}
 		}
@@ -54,15 +56,27 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.Set("Cache-Control", "no-cache")
 		h.Set("Connection", "keep-alive")
 		h.Set("X-Accel-Buffering", "no")
-		client := time.Now().String()
-		clients = append(clients, client)
+		clientUUID, err := uuid.NewUUID()
+		var clientID string
+		if err != nil {
+			log.Println(err)
+			clientID = time.Now().String()
+		} else {
+			clientID = clientUUID.String()
+		}
+		clients[clientID] = true
 		flusher := w.(http.Flusher)
 		w.WriteHeader(http.StatusOK)
+		_, err = fmt.Fprintf(w, "data: clientID %s\n\n", clientID)
+		if err != nil {
+			log.Println(err)
+		}
 		flusher.Flush()
 		for {
 			select {
 			case <-r.Context().Done():
-				log.Println("Client closed")
+				log.Println("Client closed", clientID)
+				delete(clients, clientID)
 				return
 			case m := <-ch:
 				_, err := fmt.Fprintf(w, "data: %s\n\n", m)
@@ -70,7 +84,6 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					log.Println(err)
 				}
 				flusher.Flush()
-				// time.Sleep(time.Second * 1)
 			}
 		}
 	}
