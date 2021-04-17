@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
-var clients []chan string
+var clients []string
+var ch chan string
 
 func main() {
 	ms := NewMySSE()
+	ch = make(chan string)
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
 	http.Handle("/my-sse", ms)
@@ -26,7 +29,7 @@ func main() {
 		if ok {
 			for _, client := range clients {
 				log.Println("message sent to client", client)
-				client <- content
+				ch <- content
 			}
 		}
 	})
@@ -51,7 +54,7 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.Set("Cache-Control", "no-cache")
 		h.Set("Connection", "keep-alive")
 		h.Set("X-Accel-Buffering", "no")
-		client := make(chan string)
+		client := time.Now().String()
 		clients = append(clients, client)
 		flusher := w.(http.Flusher)
 		w.WriteHeader(http.StatusOK)
@@ -61,7 +64,7 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			case <-r.Context().Done():
 				log.Println("Client closed")
 				return
-			case m := <-client:
+			case m := <-ch:
 				_, err := fmt.Fprintf(w, "data: %s\n\n", m)
 				if err != nil {
 					log.Println(err)
