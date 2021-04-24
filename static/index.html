@@ -6,29 +6,44 @@
 </head>
 <body>
 <form id="message-form" method="post">
-  <label>
-    <input id="message" type="text" name="message">
-  </label>
-  <button type="submit">Send</button>
+    <label>
+        <input id="message" type="text" name="message">
+    </label>
+    <button type="submit">Send</button>
+    <div id="g_id_onload"
+         data-client_id="408777184402-4kdeqaeclqgtj8kkm430d7rgsp7jd0lt.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse"
+    >
+    </div>
 </form>
 <script>
-    const form = document.getElementById('message-form')
-    const message = document.getElementById('message')
-    form.addEventListener('submit', (event) => {
-      event.preventDefault()
-      let value = message.value
-      fetch('/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ content: value })
-      })
+  const form = document.getElementById('message-form')
+  const message = document.getElementById('message')
+  form.addEventListener('submit', (event) => {
+    event.preventDefault()
+    let value = message.value
+    fetch('/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ content: value })
     })
-    const evtSource = new EventSource('/my-sse')
-    evtSource.addEventListener('message', (event) => {
-      console.log(event.data)
+  })
+  const evtSource = new EventSource('/my-sse')
+  evtSource.addEventListener('message', (event) => {
+    console.log(event.data)
+  })
+  function handleCredentialResponse(response) {
+    fetch('/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(response)
     })
+  }
 </script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>

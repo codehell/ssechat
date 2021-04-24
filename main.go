@@ -2,25 +2,29 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/google/uuid"
+	"github.com/codehell.net/chat/sse"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 )
 
-var clients map[string]bool
-var ch chan string
+type Login struct {
+	ClientId string `json:"clientId"`
+	Credential string `json:"credential"`
+	SelectBy string `json:"select_by"`
+}
 
 func main() {
-	ms := NewMySSE()
-	ch = make(chan string)
-	clients = make(map[string]bool)
+	ms := sse.NewMySSE()
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
 	http.Handle("/my-sse", ms)
 
 	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			return
+		}
 		message := make(map[string]string)
 		err := json.NewDecoder(r.Body).Decode(&message)
 		if err != nil {
@@ -29,62 +33,48 @@ func main() {
 		}
 		content, ok := message["content"]
 		if ok {
-			for clientID, _ := range clients {
+			ms.Clients.RLock()
+			for clientID := range ms.Clients.Clients {
 				log.Println("message sent to client", clientID)
-				ch <- content
+				ms.MessageChannel <- content
 			}
+			ms.Clients.RUnlock()
 		}
 	})
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
 
-type MySSE struct {
-	events []string
-}
-
-func NewMySSE() *MySSE {
-	return &MySSE{
-		events: nil,
-	}
-}
-
-func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h := w.Header()
-
-	if r.Method == "GET" {
-		h.Set("Content-Type", "text/event-stream")
-		h.Set("Cache-Control", "no-cache")
-		h.Set("Connection", "keep-alive")
-		h.Set("X-Accel-Buffering", "no")
-		clientUUID, err := uuid.NewUUID()
-		var clientID string
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			return
+		}
+		var login Login
+		err := json.NewDecoder(r.Body).Decode(&login)
 		if err != nil {
 			log.Println(err)
-			clientID = time.Now().String()
-		} else {
-			clientID = clientUUID.String()
+			return
 		}
-		clients[clientID] = true
-		flusher := w.(http.Flusher)
-		w.WriteHeader(http.StatusOK)
-		_, err = fmt.Fprintf(w, "data: clientID %s\n\n", clientID)
+		resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + login.Credential)
+
 		if err != nil {
-			log.Println(err)
+			log.Fatal(err)
 		}
-		flusher.Flush()
-		for {
-			select {
-			case <-r.Context().Done():
-				log.Println("Client closed", clientID)
-				delete(clients, clientID)
-				return
-			case m := <-ch:
-				_, err := fmt.Fprintf(w, "data: %s\n\n", m)
-				if err != nil {
-					log.Println(err)
-				}
-				flusher.Flush()
+		if resp.StatusCode != 200 {
+			log.Println("invalid status response " +resp.Status+ " for credential: " + login.Credential)
+			return
+		}
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				log.Println(err)
 			}
+		}(resp.Body)
+
+		body, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			log.Println(err)
+			return
 		}
-	}
+		log.Println(string(body))
+	})
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
