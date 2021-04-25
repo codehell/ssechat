@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+</head>
+<body>
+<h1>WELCOME TO CODEHELL CHAT</h1>
+<h3>Please, type your message</h3>
+<div id="messages"></div>
+<form id="message-form" method="post">
+    <label>
+        <input id="message" type="text" name="message">
+    </label>
+    <button type="submit">Send</button>
+</form>
+<script>
+  const form = document.getElementById('message-form')
+  const message = document.getElementById('message')
+  const messages = document.getElementById('messages')
+  form.addEventListener('submit', (event) => {
+    event.preventDefault()
+    let value = message.value
+    fetch('/fetch/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ content: value })
+    })
+  })
+  const evtSource = new EventSource('/my-sse')
+  evtSource.addEventListener('message', (event) => {
+    let data = JSON.parse(event.data)
+    let messageElement = document.createElement('p')
+    let content = document.createTextNode(`${data.username}: ${data.content}`)
+    messageElement.appendChild(content)
+    messages.appendChild(messageElement)
+  })
+</script>
+</body>
+</html>

@@ -49,11 +49,11 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.Clients.Unlock()
 		flusher := w.(http.Flusher)
 		w.WriteHeader(http.StatusOK)
-		_, err = fmt.Fprintf(w, "data: clientID %s\n\n", clientID)
+		/*_, err = fmt.Fprintf(w, "data: clientID %s\n\n", clientID)
 		if err != nil {
 			log.Println(err)
 		}
-		flusher.Flush()
+		flusher.Flush()*/
 		for {
 			select {
 			case <-r.Context().Done():
@@ -69,4 +69,13 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+func (s *MySSE) SendMessage(message string) {
+	s.Clients.RLock()
+	for clientID := range s.Clients.Clients {
+		log.Println("message sent to client", clientID)
+		s.MessageChannel <- message
+	}
+	s.Clients.RUnlock()
 }

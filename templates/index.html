@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+
+</head>
+<body>
+<h1>WELCOME TO CODEHELL CHAT</h1>
+<h3>You need to login with google account</h3>
+<div id="g_id_onload"
+     data-client_id="408777184402-4kdeqaeclqgtj8kkm430d7rgsp7jd0lt.apps.googleusercontent.com"
+     data-callback="handleCredentialResponse"
+>
+</div>
+<script>
+  function handleCredentialResponse (response) {
+    fetch('/fetch/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(response)
+    }).then(response => {
+      if (response.status === 200) {
+        location.assign('/chat')
+      }
+    })
+  }
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>
