@@ -3,17 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <title>Chat</title>
+    <style media="screen">
+        html, body {
+            height: 95%;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            height: 90%;
+        }
+
+        .action-pane {
+            border: 2px solid #ffc107;
+            margin: 10px;
+        }
+
+        .left-pane {
+            min-width: 120px;
+            max-width: 120px;
+            flex: 0 1 auto;
+
+        }
+
+        .right-pane {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-body-area {
+            flex: 1 1 auto;
+            overflow-y: scroll
+        }
+
+        .chat-input-area {
+            flex: 0 1 auto;
+            height: 26px;
+        }
+    </style>
 </head>
 <body>
-<h1>WELCOME TO CODEHELL CHAT</h1>
-<h3>Please, type your message</h3>
-<div id="messages"></div>
-<form id="message-form" method="post">
-    <label>
-        <input id="message" type="text" name="message">
-    </label>
-    <button type="submit">Send</button>
-</form>
+<div class="main-container">
+    <div class="action-pane left-pane">left-pane</div>
+    <div class="right-pane">
+        <div id="messages" class="action-pane chat-body-area"></div>
+        <div id="input-area" class="action-pane chat-input-area">
+            <form id="message-form" method="post">
+                <label>
+                    <input id="message" type="text" name="message">
+                </label>
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+</div>
 <script>
   const form = document.getElementById('message-form')
   const message = document.getElementById('message')
@@ -36,6 +80,8 @@
     let content = document.createTextNode(`${data.username}: ${data.content}`)
     messageElement.appendChild(content)
     messages.appendChild(messageElement)
+    messages.scrollTop = messages.scrollHeight
+    // element.scrollTop = element.scrollHeight - element.clientHeight
   })
 </script>
 </body>
