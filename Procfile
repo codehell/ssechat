@@ -1,1 +1,1 @@
-web: inespay-chat
+web: chat
