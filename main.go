@@ -10,17 +10,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Login struct {
 	ClientId   string `json:"clientId"`
 	Credential string `json:"credential"`
 	SelectBy   string `json:"select_by"`
-}
-
-type Message struct {
-	Username string `json:"username"`
-	Content  string `json:"content"`
 }
 
 var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
@@ -31,6 +27,16 @@ func main() {
 		log.Fatal(err)
 	}
 	ms := sse.NewMySSE()
+	ticker := time.NewTicker(time.Second * 50)
+	go func() {
+		message := sse.Message{
+			Source:  "heartbeat",
+			Content: "heartbeat",
+		}
+		for range ticker.C {
+			ms.SendMessage(message)
+		}
+	}()
 	fileServer := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static", fileServer))
 
@@ -86,19 +92,14 @@ func chat(ms *sse.MySSE) http.HandlerFunc {
 			log.Println("error: username is not in text format")
 			return
 		}
-		messageToSent := Message{
-			Content:  content,
-			Username: usernameText,
-		}
-		jsonMessage, err := json.Marshal(messageToSent)
-		if err != nil {
-			log.Println("error: can not marshal message")
-			return
+		messageToSent := sse.Message{
+			Content: content,
+			Source:  usernameText,
 		}
 		logText := fmt.Sprintf("message: \"%s\" sent from %s\n", content, username)
 		log.Println(logText)
 		if ok {
-			ms.SendMessage(string(jsonMessage))
+			ms.SendMessage(messageToSent)
 		} else {
 			log.Println("warning: message not sent cuz not content")
 		}

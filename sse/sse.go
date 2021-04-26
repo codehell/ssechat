@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"log"
@@ -19,6 +20,11 @@ type MySSE struct {
 	Clients ClientsLocker
 }
 
+type Message struct {
+	Source  string `json:"source"`
+	Content string `json:"content"`
+}
+
 func NewMySSE() *MySSE {
 	return &MySSE{
 		MessageChannel: make(chan string),
@@ -30,7 +36,6 @@ func NewMySSE() *MySSE {
 
 func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		log.Println("a new connection has entered")
 		h := w.Header()
 		h.Set("Content-Type", "text/event-stream")
 		h.Set("Cache-Control", "no-cache")
@@ -49,7 +54,15 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.Clients.Unlock()
 		flusher := w.(http.Flusher)
 		w.WriteHeader(http.StatusOK)
-		_, err = fmt.Fprintf(w, "data: clientID %s\n\n", clientID)
+		clientIDMessage := make(map[string]string)
+		clientIDMessage["source"] = "heartbeat"
+		clientIDMessage["content"] = clientID
+		clientIDMessageJson, err := json.Marshal(clientIDMessage)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		_, err = fmt.Fprintf(w, "data: %s\n\n", clientIDMessageJson)
 		if err != nil {
 			log.Println(err)
 			return
@@ -72,11 +85,16 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *MySSE) SendMessage(message string) {
+func (s *MySSE) SendMessage(message Message) {
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		log.Println("error: can not marshal message")
+		return
+	}
 	s.Clients.RLock()
 	for clientID := range s.Clients.Clients {
 		log.Println("message sent to client", clientID)
-		s.MessageChannel <- message
+		s.MessageChannel <- string(jsonMessage)
 	}
 	s.Clients.RUnlock()
 }
