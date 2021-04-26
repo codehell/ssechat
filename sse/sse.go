@@ -29,9 +29,9 @@ func NewMySSE() *MySSE {
 }
 
 func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h := w.Header()
-
 	if r.Method == "GET" {
+		log.Println("a new connection has entered")
+		h := w.Header()
 		h.Set("Content-Type", "text/event-stream")
 		h.Set("Cache-Control", "no-cache")
 		h.Set("Connection", "keep-alive")
@@ -49,11 +49,12 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.Clients.Unlock()
 		flusher := w.(http.Flusher)
 		w.WriteHeader(http.StatusOK)
-		/*_, err = fmt.Fprintf(w, "data: clientID %s\n\n", clientID)
+		_, err = fmt.Fprintf(w, "data: clientID %s\n\n", clientID)
 		if err != nil {
 			log.Println(err)
+			return
 		}
-		flusher.Flush()*/
+		flusher.Flush()
 		for {
 			select {
 			case <-r.Context().Done():

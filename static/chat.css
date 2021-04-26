@@ -1,0 +1,57 @@
+html, body {
+    height: 100vh;
+    margin: 0;
+}
+
+.is-flex {
+    display: flex;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.action-pane {
+    border: 2px solid #d4d0c4;
+    margin: 2px;
+}
+
+.left-pane {
+    min-width: 120px;
+    max-width: 120px;
+    flex: 0 1 auto;
+
+}
+
+.right-pane {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-body-area {
+    flex: 1 1 auto;
+    overflow-y: scroll
+}
+
+.chat-input-area {
+    flex: 0 1 auto;
+    height: 26px;
+}
+
+.chat-input-element {
+    height: 23px;
+    border: 0;
+    width: 99%;
+}
+
+.chat-label-element {
+    flex-grow: 1;
+}
+
+.chat-input-element:focus-visible {
+    border: 0;
+    outline: 0;
+}

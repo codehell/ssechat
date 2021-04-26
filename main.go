@@ -20,7 +20,7 @@ type Login struct {
 
 type Message struct {
 	Username string `json:"username"`
-	Content string `json:"content"`
+	Content  string `json:"content"`
 }
 
 var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
@@ -31,7 +31,8 @@ func main() {
 		log.Fatal(err)
 	}
 	ms := sse.NewMySSE()
-	http.Handle("/static", http.FileServer(http.Dir("./static")))
+	fileServer := http.FileServer(http.Dir("./static"))
+	http.Handle("/static/", http.StripPrefix("/static", fileServer))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		err := tpl.ExecuteTemplate(w, "index.html", nil)
@@ -50,7 +51,14 @@ func main() {
 	http.Handle("/my-sse", ms)
 	http.HandleFunc("/fetch/chat", chat(ms))
 	http.HandleFunc("/fetch/login", login)
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Printf("Defaulting to port %s\n", port)
+	}
+	log.Printf("Listenint on port %s\n", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -79,7 +87,7 @@ func chat(ms *sse.MySSE) http.HandlerFunc {
 			return
 		}
 		messageToSent := Message{
-			Content: content,
+			Content:  content,
 			Username: usernameText,
 		}
 		jsonMessage, err := json.Marshal(messageToSent)
