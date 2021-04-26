@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 type Login struct {
@@ -27,16 +26,6 @@ func main() {
 		log.Fatal(err)
 	}
 	ms := sse.NewMySSE()
-	ticker := time.NewTicker(time.Second * 50)
-	go func() {
-		message := sse.Message{
-			Source:  "heartbeat",
-			Content: "heartbeat",
-		}
-		for range ticker.C {
-			ms.SendMessage(message)
-		}
-	}()
 	fileServer := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static", fileServer))
 
@@ -129,8 +118,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
 			log.Println(err)
 		}

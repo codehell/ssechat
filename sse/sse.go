@@ -26,12 +26,23 @@ type Message struct {
 }
 
 func NewMySSE() *MySSE {
-	return &MySSE{
+	ms := &MySSE{
 		MessageChannel: make(chan string),
 		Clients: ClientsLocker{
 			Clients: make(map[string]bool),
 		},
 	}
+	ticker := time.NewTicker(time.Second * 50)
+	go func(t *time.Ticker) {
+		message := Message{
+			Source:  "heartbeat",
+			Content: "heartbeat",
+		}
+		for range t.C {
+			ms.SendMessage(message)
+		}
+	}(ticker)
+	return ms
 }
 
 func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
