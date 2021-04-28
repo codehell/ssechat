@@ -37,7 +37,7 @@
   const evtSource = new EventSource('/my-sse')
   evtSource.addEventListener('message', (event) => {
     let data = JSON.parse(event.data)
-    if (data.source === 'heartbeat') {
+    if (data.source === 'heartbeat' || data.source === 'newClient') {
       return
     }
     let messageElement = document.createElement('p')

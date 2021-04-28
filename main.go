@@ -4,21 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/codehell.net/chat/sse"
-	"github.com/gorilla/sessions"
 	"html/template"
-	"io"
 	"log"
 	"net/http"
 	"os"
 )
-
-type Login struct {
-	ClientId   string `json:"clientId"`
-	Credential string `json:"credential"`
-	SelectBy   string `json:"select_by"`
-}
-
-var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 
 func main() {
 	tpl, err := template.ParseGlob("templates/*.html")
@@ -45,7 +35,7 @@ func main() {
 	})
 	http.Handle("/my-sse", ms)
 	http.HandleFunc("/fetch/chat", chat(ms))
-	http.HandleFunc("/fetch/login", login)
+	http.HandleFunc("/fetch/login", sse.Login)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -60,7 +50,7 @@ func main() {
 
 func chat(ms *sse.MySSE) http.HandlerFunc {
 	return func(_ http.ResponseWriter, r *http.Request) {
-		session, _ := store.Get(r, "codehellchat")
+		session, _ := sse.Store.Get(r, "codehellchat")
 		username, ok := session.Values["username"]
 		if !ok {
 			log.Println("username is not set")
@@ -92,47 +82,5 @@ func chat(ms *sse.MySSE) http.HandlerFunc {
 		} else {
 			log.Println("warning: message not sent cuz not content")
 		}
-	}
-}
-
-func login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		return
-	}
-	var login Login
-	if err := json.NewDecoder(r.Body).Decode(&login); err != nil {
-		log.Println(err)
-		return
-	}
-	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + login.Credential)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if resp.StatusCode != 200 {
-		log.Println("invalid status response " + resp.Status + " for credential: " + login.Credential)
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	var accountValues map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&accountValues); err != nil {
-		log.Println(err)
-		return
-	}
-	defer func(body io.ReadCloser) {
-		err := body.Close()
-		if err != nil {
-			log.Println(err)
-		}
-	}(resp.Body)
-	username, ok := accountValues["given_name"]
-	if !ok {
-		log.Println("error: username is not present in google user data")
-		return
-	}
-	session, _ := store.Get(r, "codehellchat")
-	session.Values["username"] = username
-	if err := session.Save(r, w); err != nil {
-		log.Println(err)
-		return
 	}
 }
