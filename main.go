@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
@@ -32,6 +33,10 @@ func main() {
 			log.Println(err)
 			return
 		}
+	})
+	http.HandleFunc("/notif", func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(time.Second * 100)
+		w.WriteHeader(http.StatusOK)
 	})
 	http.Handle("/my-sse", ms)
 	http.HandleFunc("/fetch/chat", chat(ms))

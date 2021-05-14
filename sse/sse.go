@@ -32,6 +32,7 @@ func NewMySSE() *MySSE {
 			Clients: make(map[string]string),
 		},
 	}
+	// heartbeat
 	ticker := time.NewTicker(time.Second * 50)
 	go func(t *time.Ticker) {
 		message := Message{
@@ -67,22 +68,8 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			clientID = clientUUID.String()
 		}
-		// Send list of clients
-		jsonClients, err := json.Marshal(s.Clients.Clients)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		jsonClientsString := string(jsonClients)
+
 		flusher := w.(http.Flusher)
-		// Send list of clients to new client
-		w.WriteHeader(http.StatusOK)
-		_, err = w.Write([]byte("data: "+jsonClientsString+"\n\n",))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		flusher.Flush()
 		stringEmail, ok := email.(string)
 		if !ok {
 			stringEmail = "anonymous"
@@ -96,6 +83,22 @@ func (s *MySSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.Clients.Lock()
 		s.Clients.Clients[clientID] = stringEmail
 		s.Clients.Unlock()
+
+		// Send list of clients to new client
+		jsonClients, err := json.Marshal(s.Clients.Clients)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		jsonClientsString := string(jsonClients)
+		log.Println(jsonClientsString)
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write([]byte("data: "+jsonClientsString+"\n\n",))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		flusher.Flush()
 		for {
 			select {
 			case <-r.Context().Done():
